@@ -1,0 +1,37 @@
+{
+  "manifest_version": 2,
+  "name": "Click Censor",
+  "description": "Censor a selected text on the whole page with a right click",
+  "version": "1.0",
+  "homepage_url": "http://sample.com",
+
+  "permissions": [
+    "activeTab",
+    "contextMenus"
+  ],
+
+  "browser_action": {
+    "default_title": "Click Censor"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "mark.min.js",
+        "content.js"
+      ]
+    }
+  ],
+
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+
+  "icons": {
+    "48": "icon.png"
+  }
+}
