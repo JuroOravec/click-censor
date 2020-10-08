@@ -3,7 +3,7 @@
   "name": "Click Censor",
   "description": "Censor a selected text on the whole page with a right click",
   "version": "1.0.1",
-  "homepage_url": "http://sample.com",
+  "homepage_url": "https://github.com/JuroOravec/click-censor",
 
   "permissions": [
     "activeTab",
