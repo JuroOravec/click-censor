@@ -55,44 +55,73 @@ const addToCommandQueue = (cmd) => {
 };
 
 // *********************************************
-// CONTEXT MENU - Set up context menu items
+// COMMAND DEFINITION - Command available for command queue
 // *********************************************
 
-chrome.contextMenus.create({
-  id: "click-censor:censor",
-  title: "Hide Selected Text",
-  contexts: ["selection"],
-  visible: true,
-});
+const contextMenuItemsIds = new Map();
 
-chrome.contextMenus.create({
-  id: "click-censor:uncensor",
-  title: "Unhide Selected Text",
-  // Censored text is not selectable
-  contexts: ["page"],
-  visible: false,
-});
+const setCreateContextMenuItemCommand = () => {
+  const commandId = `context-menu-item:create`;
+  commandQueueCommands.set(
+    commandId,
+    (menuItemOptions) =>
+      new Promise((res) => {
+        const { id } = menuItemOptions;
+        if (contextMenuItemsIds.has(id)) return res();
+        // Set null in the map so no other command would try to create the same id in the meantime
+        contextMenuItemsIds.set(id, null);
+        const itemId = chrome.contextMenus.create(menuItemOptions, res);
+        contextMenuItemsIds.set(id, itemId);
+      })
+  );
+  return commandId;
+};
 
 const setToggleContextMenuItemCommand = (menuItemId) => {
   const commandId = `context-menu-item:toggle:${menuItemId}`;
   commandQueueCommands.set(
     commandId,
     (visible) =>
-      new Promise((res) =>
-        chrome.contextMenus.update(menuItemId, { visible }, res)
-      )
+      new Promise((res) => {
+        if (!contextMenuItemsIds.has(menuItemId)) return res();
+        chrome.contextMenus.update(menuItemId, { visible }, res);
+      })
   );
   return commandId;
 };
 
-const toggleCensorCommand = setToggleContextMenuItemCommand(
-  "click-censor:censor"
-);
-const toggleUncensorCommand = setToggleContextMenuItemCommand(
-  "click-censor:uncensor"
-);
+const commands = {
+  CREATE_ITEM: setCreateContextMenuItemCommand(),
+  TOGGLE_CENSOR: setToggleContextMenuItemCommand("click-censor:censor"),
+  TOGGLE_UNCENSOR: setToggleContextMenuItemCommand("click-censor:uncensor"),
+};
+
+// *********************************************
+// CONTEXT MENU - Set up context menu items
+// *********************************************
 
 let lastContextMenuTargetIsCensored = false;
+
+// Add items to the context menu
+addToCommandQueue({
+  command: commands.CREATE_ITEM,
+  args: {
+    id: "click-censor:censor",
+    title: "Hide Selected Text",
+    contexts: ["selection"],
+    visible: true,
+  },
+});
+addToCommandQueue({
+  command: commands.CREATE_ITEM,
+  args: {
+    id: "click-censor:uncensor",
+    title: "Unhide Selected Text",
+    // Censored text is not selectable
+    contexts: ["page"],
+    visible: false,
+  },
+});
 
 const updateContextMenuTarget = (isCensored) => {
   if (isCensored === lastContextMenuTargetIsCensored) return;
@@ -101,14 +130,14 @@ const updateContextMenuTarget = (isCensored) => {
   // Toggle between uncensor and censor context menu item based on whether we
   // clicked on censored element.
   addToCommandQueue({
-    command: toggleCensorCommand,
+    command: commands.TOGGLE_CENSOR,
     reversable: true,
     to: !isCensored,
     from: isCensored,
     args: !isCensored,
   });
   addToCommandQueue({
-    command: toggleUncensorCommand,
+    command: commands.TOGGLE_UNCENSOR,
     reversable: true,
     to: isCensored,
     from: !isCensored,
@@ -138,9 +167,7 @@ chrome.runtime.onMessage.addListener((info, sender, respond) => {
 
   if (info.action === "click-censor:update-target") {
     updateContextMenuTarget(info.payload.isCensored);
-    targetHashId = info.payload.isCensored
-      ? info.payload.hashId
-      : null;
+    targetHashId = info.payload.isCensored ? info.payload.hashId : null;
     return;
   }
 });
@@ -173,7 +200,7 @@ chrome.contextMenus.onClicked.addListener((info, tabCtx) => {
         payload: {
           hashId: targetHashId,
         },
-      }),
+      })
     );
     return;
   }
