@@ -22,13 +22,17 @@
       ],
       "js": [
         "mark.min.js",
+        "bundle.tracing.min.js",
         "content.js"
       ]
     }
   ],
 
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "bundle.tracing.min.js",
+      "background.js"
+    ],
     "persistent": false
   },
 
