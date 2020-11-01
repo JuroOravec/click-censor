@@ -1,4 +1,25 @@
 // *********************************************
+// SENTRY
+// *********************************************
+
+Sentry.init({
+  dsn:
+    "https://aaa9f167f7fc4c4fa4a19bc7114c9cfc@o470159.ingest.sentry.io/5500430",
+  integrations: [new Sentry.Integrations.BrowserTracing()],
+  tracesSampleRate: 1.0,
+});
+
+/** Capture exceptions manually */
+const withCaptureException = (fn) => (...args) => {
+  try {
+    return fn(...args);
+  } catch (e) {
+    Sentry.captureException(e);
+    throw e;
+  }
+};
+
+// *********************************************
 // COMMAND QUEUE - Queue browser API commands
 // *********************************************
 
@@ -172,36 +193,38 @@ chrome.runtime.onMessage.addListener((info, sender, respond) => {
   }
 });
 
-chrome.contextMenus.onClicked.addListener((info, tabCtx) => {
-  if (info.menuItemId === "click-censor:censor") {
-    chrome.tabs.query(
-      {
-        currentWindow: true,
-        active: true,
-        // Note: Chrome uses callback pattern while firefox has promise
-      },
-      sendMessageToTabs({
-        action: "click-censor:censor",
-        payload: info.selectionText,
-      })
-    );
-    return;
-  }
-
-  if (info.menuItemId === "click-censor:uncensor") {
-    chrome.tabs.query(
-      {
-        currentWindow: true,
-        active: true,
-        // Note: Chrome uses callback pattern while firefox has promise
-      },
-      sendMessageToTabs({
-        action: "click-censor:uncensor",
-        payload: {
-          hashId: targetHashId,
+chrome.contextMenus.onClicked.addListener(
+  withCaptureException((info, tabCtx) => {
+    if (info.menuItemId === "click-censor:censor") {
+      chrome.tabs.query(
+        {
+          currentWindow: true,
+          active: true,
+          // Note: Chrome uses callback pattern while firefox has promise
         },
-      })
-    );
-    return;
-  }
-});
+        sendMessageToTabs({
+          action: "click-censor:censor",
+          payload: info.selectionText,
+        })
+      );
+      return;
+    }
+
+    if (info.menuItemId === "click-censor:uncensor") {
+      chrome.tabs.query(
+        {
+          currentWindow: true,
+          active: true,
+          // Note: Chrome uses callback pattern while firefox has promise
+        },
+        sendMessageToTabs({
+          action: "click-censor:uncensor",
+          payload: {
+            hashId: targetHashId,
+          },
+        })
+      );
+      return;
+    }
+  })
+);
