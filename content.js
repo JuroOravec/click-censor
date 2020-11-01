@@ -20,15 +20,6 @@
     separateWordSearch: false,
   };
 
-  const getMarkId = (() => {
-    function* infinite() {
-      let index = 0;
-      while (true) yield index++;
-    }
-
-    return () => infinite.next();
-  })();
-
   /**
    * Remove old markings and create new ones.
    *
