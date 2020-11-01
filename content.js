@@ -1,7 +1,28 @@
 (async () => {
+  // *********************************************
+  // SENTRY
+  // *********************************************
+
+  Sentry.init({
+    dsn:
+      "https://aaa9f167f7fc4c4fa4a19bc7114c9cfc@o470159.ingest.sentry.io/5500430",
+    integrations: [new Sentry.Integrations.BrowserTracing()],
+    tracesSampleRate: 1.0,
+  });
+
+  /** Capture exceptions manually */
+  const withCaptureException = (fn) => (...args) => {
+    try {
+      return fn(...args);
+    } catch (e) {
+      Sentry.captureException(e);
+      throw e;
+    }
+  };
+
   const stringHashDataProp = {
-    JS: 'clickCensorId',
-    DOM: 'click-censor-id',
+    JS: "clickCensorId",
+    DOM: "click-censor-id",
   };
   const targetEl = document.body;
 
@@ -114,35 +135,44 @@
   // MESSAGING
   // *********************************************
 
-  chrome.runtime.onMessage.addListener((data, options, sendResponse) => {
-    if (!data) return;
-    if (data.action === "click-censor:censor") {
-      const stringHash = hashCode(data.payload);
+  chrome.runtime.onMessage.addListener(
+    // Exceptions in this listener are not automatically covered by Sentry
+    withCaptureException((data, options, sendResponse) => {
+      if (!data) return;
+      if (data.action === "click-censor:censor") {
+        const stringHash = hashCode(data.payload);
 
-      return remark(data.payload, {
-        ...markOptions,
-        each: (el) => {
-          el.dataset[stringHashDataProp.JS] = stringHash;
-          censorText(el);
-          watchElHover(el, (newState) => {
-            chrome.runtime.sendMessage({
-              action: "click-censor:update-target",
-              payload: {
-                isCensored: newState,
-                hashId: newState ? stringHash : null,
-              },
-            });
-          });
-        },
-      }, {
-        exclude: [`:not([data-${stringHashDataProp.DOM}="${stringHash}"])`],
-      });
-    }
+        return remark(
+          data.payload,
+          {
+            ...markOptions,
+            each: (el) => {
+              el.dataset[stringHashDataProp.JS] = stringHash;
+              censorText(el);
+              watchElHover(el, (newState) => {
+                chrome.runtime.sendMessage({
+                  action: "click-censor:update-target",
+                  payload: {
+                    isCensored: newState,
+                    hashId: newState ? stringHash : null,
+                  },
+                });
+              });
+            },
+          },
+          {
+            exclude: [`:not([data-${stringHashDataProp.DOM}="${stringHash}"])`],
+          }
+        );
+      }
 
-    if (data.action === "click-censor:uncensor") {
-      mark.unmark({
-        exclude: [`:not([data-${stringHashDataProp.DOM}="${data.payload.hashId}"])`],
-      });
-    }
-  });
+      if (data.action === "click-censor:uncensor") {
+        mark.unmark({
+          exclude: [
+            `:not([data-${stringHashDataProp.DOM}="${data.payload.hashId}"])`,
+          ],
+        });
+      }
+    })
+  );
 })();
