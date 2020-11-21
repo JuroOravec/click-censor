@@ -10,7 +10,7 @@ and the [Online Privacy Policy Generator](https://www.privacypolicyonline.com/pr
 
 ## Log Files
 
-Click Censor does not* store nor generate any log files.
+Click Censor does not store nor generate any log files.
 
 ## Cookies and Web Beacons
 
