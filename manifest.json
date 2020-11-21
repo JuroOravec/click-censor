@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Click Censor",
   "description": "Censor a selected text on the whole page with a right click",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "homepage_url": "https://github.com/JuroOravec/click-censor",
 
   "permissions": [
